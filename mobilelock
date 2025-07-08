@@ -8,6 +8,7 @@ local m = p:GetMouse()
 
 local s = Instance.new("ScreenGui")
 s.Parent = p:WaitForChild("PlayerGui")
+s.ResetOnSpawn = false
 
 local t = Instance.new("Frame")
 t.Name = "TopBar"
