@@ -200,13 +200,18 @@ local dth = 0.5
 local dc = nil
 local uc = nil
 
-local function gml()
-    return U:GetMouseLocation() - Vector2.new(0, 36)
+-- Универсальная функция получения позиции ввода
+local function getInputPos(i)
+    if i.UserInputType == Enum.UserInputType.Touch then
+        return Vector2.new(i.Position.X, i.Position.Y)
+    else
+        return U:GetMouseLocation() - Vector2.new(0, 36)
+    end
 end
 
 local function odic()
     if dg then
-        local mp = gml()
+        local mp = getInputPos(U.InputBegan) -- Use the input that started the drag
         local np = mp - dof
         local g = b3.Parent
         local as = g.AbsoluteSize
@@ -219,6 +224,7 @@ end
 
 local function oie(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        activeInput = nil
         local ht = tick() - dt
         if dg then
             dg = false
@@ -247,20 +253,33 @@ local function oie(i)
     end
 end
 
+-- Drag/Lock с поддержкой Touch
+local activeInput = nil
 b3.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
         dt = tick()
-        ds = gml()
+        ds = getInputPos(i)
         dof = ds - Vector2.new(b3.AbsolutePosition.X, b3.AbsolutePosition.Y)
         dg = false
+        activeInput = i
         dc = U.InputChanged:Connect(function(mi)
-            if mi.UserInputType == Enum.UserInputType.MouseMovement then
-                if not dg and tick() - dt > dth and U:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+            if (mi.UserInputType == Enum.UserInputType.MouseMovement) or (mi.UserInputType == Enum.UserInputType.Touch and activeInput and mi == activeInput) then
+                if not dg and tick() - dt > dth and (
+                    (i.UserInputType == Enum.UserInputType.MouseButton1 and U:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)) or
+                    (i.UserInputType == Enum.UserInputType.Touch)
+                ) then
                     dg = true
                     b3.BackgroundColor3 = Color3.fromRGB(100, 100, 180)
                 end
                 if dg then
-                    odic()
+                    local pos = getInputPos(mi)
+                    local np = pos - dof
+                    local g = b3.Parent
+                    local as = g.AbsoluteSize
+                    local bs = b3.AbsoluteSize
+                    local rx = math.clamp(np.X, 0, as.X - bs.X)
+                    local ry = math.clamp(np.Y, 0, as.Y - bs.Y)
+                    b3.Position = UDim2.new(0, rx, 0, ry)
                 end
             end
         end)
